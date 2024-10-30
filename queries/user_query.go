@@ -13,32 +13,37 @@ type Artist struct {
 	Sex  string `json:"sex"`
 }
 
+// for deletion of data
 type UserData struct {
-	id         int
-	name       string
-	age        int
-	sex        string
-	created_at time.Time
+	Id         int       `json:"id"`
+	Name       string    `json:"Name"`
+	Age        int       `json:"age"`
+	Sex        string    `json:"sex"`
+	Created_at time.Time `json:"created_at"`
+}
+
+// for insertion data
+type PartialUserData struct {
+	ID        int       `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // to use it in the other packages name the function starting letter in uppercase
 
-func InsertQuery(db *sql.DB, a Artist) (int64, error) {
-	iquery := `INSERT INTO Artist (name , age , sex) values ($1 , $2 ,$3) RETURNING *`
+func InsertQuery(db *sql.DB, a Artist) (PartialUserData, error) {
+	iquery := `INSERT INTO Artist (name , age , sex) values ($1 , $2 ,$3) RETURNING id , created_at`
 
-	res, err := db.Exec(iquery, a.Name, a.Age, a.Sex)
+	var pu PartialUserData
+
+	err := db.QueryRow(iquery, a.Name, a.Age, a.Sex).Scan(&pu.ID, &pu.CreatedAt)
 	if err != nil {
-		return 0, fmt.Errorf("error while inserting: %v", err)
+		return PartialUserData{}, fmt.Errorf("error while inserting: %v", err)
 
 	}
 
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("error in row insertion operation: %v", err)
-	}
 	fmt.Print("Artist inserted successfully\n")
 
-	return rowsAffected, nil
+	return pu, nil
 
 }
 
@@ -78,7 +83,7 @@ func DelUser(db *sql.DB, n string) (UserData, error) {
 	var u UserData
 
 	gquery := `SELECT * FROM Artist WHERE name = $1`
-	err := db.QueryRow(gquery, value).Scan(&u.id, &u.name, &u.age, &u.sex, &u.created_at)
+	err := db.QueryRow(gquery, value).Scan(&u.Id, &u.Name, &u.Age, &u.Sex, &u.Created_at)
 	if err == sql.ErrNoRows {
 		return UserData{}, fmt.Errorf("no user found with the specified name: %v", err)
 	} else if err != nil {
@@ -100,6 +105,7 @@ func DelUser(db *sql.DB, n string) (UserData, error) {
 	}
 
 	fmt.Println("User deleted successfully.")
+	fmt.Println(u)
 	return u, nil
 }
 

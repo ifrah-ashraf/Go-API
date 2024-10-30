@@ -37,7 +37,8 @@ func main() {
 	defer db.Close()
 
 	if err = db.Ping(); err != nil {
-		panic(err)
+		log.Printf("Database connection error : %v", err)
+		return
 	}
 
 	fmt.Println("The database is connected")
@@ -75,12 +76,10 @@ func FetchUser(w http.ResponseWriter, db *sql.DB) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-
 	// yha artist struct ss data json mein convert ho rha hai using encoding
 	if err := json.NewEncoder(w).Encode(artists); err != nil {
 		http.Error(w, "Failed to encode artists to JSON", http.StatusInternalServerError)
 	}
-
 }
 
 func AddUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
@@ -102,14 +101,18 @@ func AddUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 
-	rowsAffected, err := queries.InsertQuery(db, a)
+	pdata, err := queries.InsertQuery(db, a)
 	if err != nil {
 		http.Error(w, "error while adding user to db", http.StatusInternalServerError)
 		fmt.Printf("Insert query failed: %v\n", err)
 		return
 	}
-	fmt.Fprint(w, "Successfully inserted\t", rowsAffected)
 
+	response := []queries.PartialUserData{pdata}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode receive id, time to json", http.StatusInternalServerError)
+	}
 }
 
 func DelUser(w http.ResponseWriter, r *http.Request, p httprouter.Params, db *sql.DB) {
